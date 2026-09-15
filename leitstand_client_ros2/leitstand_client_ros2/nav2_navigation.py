@@ -21,6 +21,8 @@ import math
 import threading
 from typing import Any, Callable
 
+from nav_msgs.msg import Path
+
 from leitstand.robot.v1 import mission_pb2, mission_state_pb2
 
 from leitstand_client import geo, proto_json
