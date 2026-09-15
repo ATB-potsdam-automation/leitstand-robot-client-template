@@ -16,8 +16,8 @@ RUN apt-get update \
 
 # A virtual environment that sees the ROS packages: the contract and the client's dependencies
 # go there, Ubuntu's own Python stays untouched, and its pip is current on every base image.
-RUN python3 -m venv --system-site-packages /opt/venv
-ENV PATH=/opt/venv/bin:$PATH
+# RUN python3 -m venv --system-site-packages /opt/venv
+# ENV PATH=/opt/venv/bin:$PATH
 
 WORKDIR /ws
 COPY leitstand-robot-contract /contract
@@ -32,7 +32,7 @@ RUN apt-get update \
 # The venv's pip is upgraded first: the one Ubuntu 22.04 ships builds the contract's pyproject
 # metadata as UNKNOWN with no modules.
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir /contract -r src/leitstand_client/requirements.txt
+ && pip install --break-system-packages --no-cache-dir /contract -r src/leitstand_client/requirements.txt
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build --symlink-install
 
 COPY leitstand-robot-client-template/docker/entrypoint.sh /entrypoint.sh
