@@ -11,7 +11,7 @@ ARG ROS_DISTRO
 # Both RMWs are installed because the container must speak the same DDS vendor as the robot's
 # Nav2; pick one at run time with RMW_IMPLEMENTATION.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3-venv ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+ && apt-get install -y --no-install-recommends python3-venv python3-pip ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
  && rm -rf /var/lib/apt/lists/*
 
 # A virtual environment that sees the ROS packages: the contract and the client's dependencies
