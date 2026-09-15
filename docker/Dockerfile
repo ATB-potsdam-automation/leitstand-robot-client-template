@@ -31,8 +31,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 # The venv's pip is upgraded first: the one Ubuntu 22.04 ships builds the contract's pyproject
 # metadata as UNKNOWN with no modules.
-RUN pip install --break-system-packages --no-cache-dir --upgrade pip \
- && pip install --break-system-packages --no-cache-dir /contract -r src/leitstand_client/requirements.txt
+RUN pip install --break-system-packages --no-cache-dir /contract -r src/leitstand_client/requirements.txt
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && colcon build --symlink-install
 
 COPY leitstand-robot-client-template/docker/entrypoint.sh /entrypoint.sh
