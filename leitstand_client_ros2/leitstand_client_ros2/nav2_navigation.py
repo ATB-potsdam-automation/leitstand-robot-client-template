@@ -223,12 +223,11 @@ class Nav2Navigation:
 
         try:
             poses = await self._build_poses(stage)
-
-        path=Path()
-        path.header.stamp = self._node.get_clock().now().to_msg()
-        path.header.frame_id = self._cfg.frames.map
-        path.poses=poses
-        self._path_pub.publish(path)
+            path=Path()
+            path.header.stamp = self._node.get_clock().now().to_msg()
+            path.header.frame_id = self._cfg.frames.map
+            path.poses=poses
+            self._path_pub.publish(path)
 
         except _FrameSwitchUnsupported as exc:
             return StageResult(
