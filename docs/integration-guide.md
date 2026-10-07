@@ -274,6 +274,33 @@ messages from `leitstand-robot-contract` as JSON, the order to declare them in, 
 backend waits (10 s dispatch, 5 s cancel, 3 s pause and resume), and what a receipt means. The
 Python library is then a worked reference, nothing more.
 
+## Optional: recording the run (data platform)
+
+A robot that delivers its measurements to the data platform can have the client start and stop
+the recording with the run, so a recording belongs to a mission without anybody asking for it
+and its `run_id` is exact. Add one block to `robot.yaml`:
+
+```yaml
+recording:
+  start_cmd: /opt/record/start.sh      # called as: start_cmd <name> <stream>[,<stream>...]
+  stop_cmd: /opt/record/stop.sh        # called as: stop_cmd <name>
+  platform_url: http://platform:8000   # the rules per stream are read from there
+  streams: [telemetry, camera]         # the streams this robot has
+```
+
+Leave the block out and the client records nothing; recordings are then started by hand or by
+the data platform's own command. The two programs are the robot's own (a systemd unit, a launch
+file, a node of yours); only the calls and their arguments are fixed, and example scripts for
+`ros2 bag record` are in the data platform's `docs/recording-control.md`. The recording name is
+`<robot_id>-<run_id>`, and the run id is also in the environment as `LEITSTAND_RUN_ID`.
+
+`streams` names what this robot has, which changes when the machine changes. Which of them a
+run records is held by the data platform (`GET /v1/robots/<id>/policy`, field `record`), so
+that setting lives in one place and can be changed without touching the robot: a rule switches
+a stream off, a stream the platform holds no rule for is recorded, and while the platform
+cannot be reached all of them are recorded. A recorder that fails is logged and the mission
+goes on: recording never decides a run's outcome.
+
 ## What the Leitstand expects from any client
 
 - **Identity**: an `id` of lowercase letters, digits, `_` and `-`; a liveliness token on

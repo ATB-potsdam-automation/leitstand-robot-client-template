@@ -33,6 +33,7 @@ from leitstand.robot.v1 import mission_pb2, mission_state_pb2, robot_control_pb2
 
 from leitstand_client import keys, proto_json
 from leitstand_client.navigation import Navigation, StageResult, is_immediate
+from leitstand_client.recording import MissionRecording
 
 logger = logging.getLogger(__name__)
 
@@ -136,10 +137,13 @@ class MissionExecutor:
         *,
         state_publisher: Any = None,
         loop: asyncio.AbstractEventLoop | None = None,
+        recording: MissionRecording | None = None,
     ) -> None:
         self._session = session
         self._robot_id = robot_id
         self._nav = navigation
+        # None means this robot does not record with its missions.
+        self._recording = recording
 
         self._lock = threading.Lock()
         self._active: _ActiveContext | None = None
@@ -447,6 +451,10 @@ class MissionExecutor:
     async def _execute_mission(self, ctx: _ActiveContext) -> None:
         ctx.task = asyncio.current_task()
         try:
+            # Before the first stage, so the drive is recorded from its beginning. Started here
+            # rather than in the dispatch reply, because the reply is a receipt the backend
+            # waits for and the recorder's programs block.
+            await self._record_run(start=True, run_id=ctx.mission.run_id)
             await self._publish_state(ctx)
 
             heartbeat = asyncio.create_task(self._heartbeat(ctx))
@@ -558,6 +566,8 @@ class MissionExecutor:
             except Exception:  # noqa: BLE001
                 pass
         finally:
+            # Every way out of the run passes here: finished, failed, cancelled, shutting down.
+            await self._record_run(start=False, run_id=ctx.mission.run_id)
             with self._lock:
                 if self._active is ctx:
                     self._active = None
@@ -567,6 +577,18 @@ class MissionExecutor:
                 mission_state_pb2.MissionExecStatus.Name(ctx.terminal_status)
                 if ctx.terminal_status is not None
                 else "unset",
+            )
+
+    async def _record_run(self, *, start: bool, run_id: str) -> None:
+        """Start or stop the run's recording in a thread; a recorder never ends a mission."""
+        if self._recording is None:
+            return
+        rec = self._recording
+        try:
+            await asyncio.to_thread(rec.start if start else rec.stop, run_id)
+        except Exception as exc:  # noqa: BLE001 - recording is never a mission's outcome
+            logger.exception(
+                "[executor] recording %s failed: %s", "start" if start else "stop", exc
             )
 
     async def _run_on_cancel(self, ctx: _ActiveContext, stage: mission_pb2.Stage) -> None:

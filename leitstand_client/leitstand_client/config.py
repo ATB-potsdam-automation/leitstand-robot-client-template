@@ -132,6 +132,25 @@ class FakeSpec(BaseModel):
     speed_mps: float = Field(default=1.0, gt=0)
 
 
+class RecordingSpec(BaseModel):
+    """Recording that follows a run, started by the client with two programs of the robot's own.
+
+    ``streams`` names the streams this robot has. Which of them a run records is held by the
+    data platform (``platform_url``): a rule can switch one off, a stream without a rule is
+    recorded. While the platform cannot be reached, all of them are recorded.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_cmd: str = Field(min_length=1)
+    stop_cmd: str = Field(min_length=1)
+    streams: list[str] = Field(default_factory=list)
+    # Empty means the client does not ask: it records `streams` and nothing else.
+    platform_url: str = ""
+    policy_timeout_s: float = Field(default=5.0, gt=0)
+    command_timeout_s: float = Field(default=20.0, gt=0)
+
+
 class RobotSpec(BaseModel):
     """Full robot.yaml schema."""
 
@@ -148,6 +167,9 @@ class RobotSpec(BaseModel):
     fake: FakeSpec = Field(default_factory=FakeSpec)
     # Parsed by the ROS package, which is the only thing that knows what Nav2 is.
     nav2: dict[str, Any] | None = None
+    # Absent means this robot records nothing on its own; recordings are then started by hand
+    # or by the data platform's own command.
+    recording: RecordingSpec | None = None
 
     @field_validator("id")
     @classmethod

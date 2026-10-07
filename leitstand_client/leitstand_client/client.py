@@ -11,6 +11,7 @@ from leitstand_client.factsheet import FactsheetPublisher
 from leitstand_client.mission_executor import MissionExecutor
 from leitstand_client.navigation import Navigation
 from leitstand_client.pose_source import PoseSource
+from leitstand_client.recording import MissionRecording, PlatformPolicy, ScriptRecorder
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,9 @@ class LeitstandClient:
         if self._spec.factsheet is not None:
             self._factsheet = FactsheetPublisher(self._session, robot_id, self._spec.factsheet)
 
-        self._executor = MissionExecutor(self._session, robot_id, self._navigation)
+        self._executor = MissionExecutor(
+            self._session, robot_id, self._navigation, recording=_recording(self._spec)
+        )
         self._executor.start()
 
         # After the executor, because the metadata reply names the run it is executing.
@@ -90,3 +93,25 @@ class LeitstandClient:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("[client] metadata undeclare failed: %s", exc)
         logger.info("[client] %s offline", self._spec.id)
+
+
+def _recording(spec: RobotSpec) -> MissionRecording | None:
+    """The run recording this robot.yaml asks for, or None when it asks for none."""
+    cfg = spec.recording
+    if cfg is None:
+        return None
+    policy = (
+        PlatformPolicy(cfg.platform_url, spec.id, timeout_s=cfg.policy_timeout_s)
+        if cfg.platform_url
+        else None
+    )
+    logger.info(
+        "[client] missions are recorded (%s)",
+        "streams from the data platform" if policy is not None else "streams from robot.yaml",
+    )
+    return MissionRecording(
+        ScriptRecorder(cfg.start_cmd, cfg.stop_cmd, timeout_s=cfg.command_timeout_s),
+        spec.id,
+        policy=policy,
+        streams=cfg.streams,
+    )
