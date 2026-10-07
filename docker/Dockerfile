@@ -4,8 +4,8 @@ FROM ros:${ROS_DISTRO}
 ARG ROS_DISTRO
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3-venv ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
- && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends python3-venv ros-${ROS_DISTRO}-rmw-cyclonedds-cpp \
+    && rm -rf /var/lib/apt/lists/*
 
 # A venv, because pip may not modify Ubuntu's Python packages, with system site packages for rclpy.
 RUN python3 -m venv --system-site-packages /opt/venv
@@ -17,13 +17,12 @@ COPY leitstand-robot-client-template/leitstand_client src/leitstand_client
 COPY leitstand-robot-client-template/leitstand_client_ros2 src/leitstand_client_ros2
 
 RUN apt-get update \
- && rosdep update --include-eol-distros \
- && rosdep install --from-paths src --ignore-src -y \
- && rm -rf /var/lib/apt/lists/*
+    && rosdep update --include-eol-distros \
+    && rosdep install --from-paths src --ignore-src -y \
+    && rm -rf /var/lib/apt/lists/*
 # ubuntu 22.04 pip is too old to build the contract's package metadata.
 RUN pip install --no-cache-dir --upgrade pip \
- && pip install --no-cache-dir /contract -r src/leitstand_client/requirements.txt
-# Built through the virtual environment's interpreter, so the installed entry points run with it
+    && pip install --no-cache-dir /contract -r src/leitstand_client/requirements.txt
 RUN . /opt/ros/${ROS_DISTRO}/setup.sh && python -m colcon build --symlink-install
 
 COPY leitstand-robot-client-template/docker/entrypoint.sh /entrypoint.sh
